@@ -1,21 +1,8 @@
-{
-	"modListVersion": 2,
-	"modList": [{
-		"modid": "${modId}",
-		"name": "${modName}",
-		"description": "An example mod for Minecraft 1.7.10 with Forge focused on a stable setup.",
-		"version": "${modVersion}",
-		"mcversion": "${minecraftVersion}",
-		"url": "https://github.com/SinTh0r4s/MyMod",
-		"updateUrl": "",
-		"authorList": ["SinTho0r4s"],
-		"credits": "",
-		"logoFile": "",
-		"screenshots": [],
-		"parent": "",
-		"requiredMods": [],
-		"dependencies": [],
-		"dependants": [],
-		"useDependencyInformation": false
-	}]
-}
+[{
+  "modid": "${modId}",
+  "name": "${modName}",
+  "description": "Play Minecraft with a controller: analog movement and camera, menu navigation with a cursor, inventory controls, rebindable buttons and a mapping wizard for any gamepad.",
+  "version": "${modVersion}",
+  "mcversion": "${minecraftVersion}",
+  "credits": "Inspired by Controllable by MrCrayfish (MIT), whose button icons are used."
+}]
