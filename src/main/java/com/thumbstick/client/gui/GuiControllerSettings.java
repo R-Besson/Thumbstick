@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
@@ -21,6 +22,8 @@ public class GuiControllerSettings extends GuiScreen {
     // Button ids follow the layout order, two per row
     private static final int INVERT_LOOK = 0, ANALOG_MOVEMENT = 1, SNEAK_MODE = 2, CURSOR_SNAPPING = 3, BUTTON_ICONS = 4,
         SHOW_HINTS = 5, CURSOR_STICK = 6, CURSOR_STYLE = 7, BINDINGS = 8, MAPPING = 9, RESCAN = 10, DONE = 11, CONTROLLER = 12;
+
+    private static final ResourceLocation ICON = new ResourceLocation("thumbstick", "icon.png");
 
     private final GuiScreen parent;
     private GuiButton controllerButton;
@@ -129,7 +132,12 @@ public class GuiControllerSettings extends GuiScreen {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         drawDefaultBackground();
-        drawCenteredString(fontRendererObj, I18n.format("thumbstick.gui.settings.title"), width / 2, 8, 0xFFFFFF);
+        String title = I18n.format("thumbstick.gui.settings.title");
+        drawCenteredString(fontRendererObj, title, width / 2, 8, 0xFFFFFF);
+        // Mod icon left of the title
+        mc.getTextureManager().bindTexture(ICON);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        func_152125_a(width / 2 - fontRendererObj.getStringWidth(title) / 2 - 20, 4, 0, 0, 1024, 1024, 16, 16, 1024, 1024);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 

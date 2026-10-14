@@ -1,12 +1,14 @@
-# Thumbstick
+<p align="center"><img src=".github/icon.png" width="160" alt="Thumbstick logo"></p>
+<h1 align="center">Thumbstick</h1>
 
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.7.10-62B47A?logo=minecraft&logoColor=white)](https://minecraft.wiki/w/Java_Edition_1.7.10)
-[![Forge](https://img.shields.io/badge/Forge-10.13.4.1614-E04E14)](https://files.minecraftforge.net/net/minecraftforge/forge/index_1.7.10.html)
-![Side](https://img.shields.io/badge/side-client%20only-blue)
-[![Release](https://img.shields.io/github/v/release/R-Besson/Thumbstick?label=release)](https://github.com/R-Besson/Thumbstick/releases)
-[![Build](https://img.shields.io/github/actions/workflow/status/R-Besson/Thumbstick/build-and-test.yml?branch=main)](https://github.com/R-Besson/Thumbstick/actions)
+<p align="center">
+  <a href="https://minecraft.wiki/w/Java_Edition_1.7.10"><img src="https://img.shields.io/badge/Minecraft-1.7.10-62B47A?logo=minecraft&logoColor=white" alt="Minecraft"></a>
+  <a href="https://files.minecraftforge.net/net/minecraftforge/forge/index_1.7.10.html"><img src="https://img.shields.io/badge/Forge-10.13.4.1614-E04E14" alt="Forge"></a>
+  <img src="https://img.shields.io/badge/side-client%20only-blue" alt="Side">
+  <a href="https://github.com/R-Besson/Thumbstick/releases"><img src="https://img.shields.io/github/v/release/R-Besson/Thumbstick?label=release" alt="Release"></a>
+</p>
 
-Controller support for Minecraft Forge 1.7.10. Play the whole game, menus included, from your gamepad.
+<p align="center">A Controller Support Mod for Minecraft Forge 1.7.10.</p>
 
 > [!NOTE]
 > Thumbstick is **client side only**. It does nothing on servers.
