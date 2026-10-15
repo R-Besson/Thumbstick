@@ -138,7 +138,7 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
         if (now - listenStart > LISTEN_TIMEOUT_MS) listening = null;
     }
 
-    /** Takes the current state as resting, whatever is held, so noisy axes or a held button cannot stall it */
+    /** Takes the current state as resting, whatever is held */
     private void settle(long now) {
         restAxes = new float[device.getAxisCount()];
         for (int i = 0; i < restAxes.length; i++) restAxes[i] = device.getAxisValue(i);
