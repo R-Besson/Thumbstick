@@ -3,8 +3,11 @@ package com.thumbstick.client.gui;
 import java.util.Locale;
 
 import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiListExtended;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.resources.I18n;
+import net.minecraft.util.EnumChatFormatting;
 
 import org.lwjgl.input.Keyboard;
 
@@ -17,43 +20,38 @@ import com.thumbstick.controller.GamepadButton;
 import com.thumbstick.controller.InputSource;
 import com.thumbstick.controller.InputSource.Mode;
 import com.thumbstick.controller.MappingStore;
-import com.thumbstick.util.Reflect;
 
 /**
- * Wizard building a mapping for the active controller by asking for each input in turn and watching which raw
- * button, axis or hat changes. The menu cursor is off here since the current mapping may be wrong, so steps time out
- * on their own and the finished mapping is saved with the newly mapped A button.
+ * Lists every logical input of the active controller with the raw button, axis or hat it reads from. Clicking one
+ * listens for that input alone by watching which raw input leaves its resting state. Changes are saved right away.
  */
 public class GuiControllerMapping extends GuiScreen implements MenuNavigator.CaptureScreen {
 
-    private static final long STEP_TIMEOUT_MS = 10_000L, SETTLE_MS = 500L;
+    private static final long LISTEN_TIMEOUT_MS = 10_000L, SETTLE_MS = 500L;
     private static final float AXIS_THRESHOLD = 0.6F;
-    private static final int BACK = 0, SKIP = 1, SAVE = 2, RESET = 3, CANCEL = 4;
+    private static final int RESET = 0, DONE = 1;
 
     private enum Phase {
         /** Waiting for the controller to be left alone to record its resting state */
         SETTLING,
         LISTENING,
         /** Waiting for the input just assigned to be released */
-        RELEASING,
-        FINISHED
+        RELEASING
     }
 
     private final GuiScreen parent;
     private final Device device;
-    private final ControllerMapping mapping;
+    private ControllerMapping mapping;
+    private MappingList list;
 
-    private Phase phase = Phase.SETTLING;
-    private int step;
-    private long phaseStart = System.currentTimeMillis(), settleSince;
-    private String lastAssigned;
+    /** The input being listened for, null when idle */
+    private String listening;
+    private Phase phase;
+    private long listenStart, settleSince;
 
     private boolean[] restButtons;
     private float[] restAxes, settleAxes;
     private int[] restHatX, restHatY;
-
-    private ControllerMapping.Resolved finishedMapping;
-    private boolean confirmWasDown = true, restartWasDown = true;
 
     public GuiControllerMapping(GuiScreen parent) {
         this.parent = parent;
@@ -62,117 +60,78 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
     }
 
     @Override
-    public boolean isCapturingController() { return true; }
+    public boolean isCapturingController() { return listening != null; }
 
     @Override
     @SuppressWarnings("unchecked")
     public void initGui() {
+        list = new MappingList();
         buttonList.clear();
-        int left = width / 2 - 155, right = width / 2 + 5;
-        buttonList.add(new GuiButton(BACK, left, height - 52, 150, 20, I18n.format("thumbstick.gui.mapping.back")));
-        buttonList.add(new GuiButton(SKIP, right, height - 52, 150, 20, I18n.format("thumbstick.gui.mapping.skip")));
-        buttonList.add(new GuiButton(SAVE, right, height - 52, 150, 20, I18n.format("thumbstick.gui.mapping.save")));
-        buttonList.add(new GuiButton(RESET, left, height - 28, 150, 20, I18n.format("thumbstick.gui.mapping.reset")));
-        buttonList.add(new GuiButton(CANCEL, right, height - 28, 150, 20, I18n.format("gui.cancel")));
-        updateButtons();
+        GuiButton reset = new GuiButton(RESET, width / 2 - 155, height - 29, 150, 20, I18n.format("thumbstick.gui.mapping.reset"));
+        reset.enabled = device != null;
+        buttonList.add(reset);
+        buttonList.add(new GuiButton(DONE, width / 2 + 5, height - 29, 150, 20, I18n.format("gui.done")));
     }
 
-    private void updateButtons() {
-        for (GuiButton b : Reflect.getButtons(this)) {
-            if (b.id == SKIP) b.visible = phase != Phase.FINISHED;
-            if (b.id == SAVE) b.visible = phase == Phase.FINISHED;
-            if (b.id == BACK) b.enabled = step > 0;
-            if (b.id != CANCEL) b.enabled &= device != null;
-        }
+    private void listen(String key) {
+        listening = key;
+        phase = Phase.SETTLING;
+        listenStart = System.currentTimeMillis();
+        settleAxes = null;
+        // The press that clicked the row must not leave a menu click held
+        ControllerManager.INSTANCE.suppressHeldButtons();
     }
 
-    private String currentKey() { return ControllerMapping.KEYS[step]; }
-
-    private void setPhase(Phase newPhase) {
-        phase = newPhase;
-        phaseStart = System.currentTimeMillis();
-        if (newPhase == Phase.FINISHED) {
-            finishedMapping = new ControllerMapping.Resolved(mapping, device);
-            confirmWasDown = restartWasDown = true;
-        }
-        updateButtons();
-    }
-
-    private void skip() {
-        mapping.set(currentKey(), "");
-        lastAssigned = null;
-        advance();
-    }
-
-    private void advance() {
-        if (step + 1 >= ControllerMapping.KEYS.length) setPhase(Phase.FINISHED);
-        else {
-            step++;
-            setPhase(Phase.LISTENING);
-        }
+    private void assign(String key, String source) {
+        mapping.set(key, source);
+        MappingStore.saveMapping(device, mapping);
+        ControllerManager.INSTANCE.reloadMapping();
     }
 
     @Override
     protected void actionPerformed(GuiButton button) {
-        switch (button.id) {
-            case BACK -> {
-                if (phase != Phase.FINISHED) step = Math.max(0, step - 1);
-                lastAssigned = null;
-                setPhase(restButtons == null ? Phase.SETTLING : Phase.LISTENING);
-            }
-            case SKIP -> skip();
-            case SAVE -> save();
-            case RESET -> {
-                MappingStore.resetMapping(device);
-                ControllerManager.INSTANCE.reloadMapping();
-                mc.displayGuiScreen(parent);
-            }
-            case CANCEL -> mc.displayGuiScreen(parent);
-            default -> {}
-        }
+        if (button.id == RESET) {
+            MappingStore.resetMapping(device);
+            ControllerManager.INSTANCE.reloadMapping();
+            mapping = new ControllerMapping(MappingStore.getMapping(device));
+        } else if (button.id == DONE) mc.displayGuiScreen(parent);
     }
 
-    private void save() {
-        MappingStore.saveMapping(device, mapping);
-        ControllerManager.INSTANCE.reloadMapping();
-        mc.displayGuiScreen(parent);
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
+        if (listening != null) listening = null;
+        else if (mouseButton != 0 || !list.func_148179_a(mouseX, mouseY, mouseButton)) super.mouseClicked(mouseX, mouseY, mouseButton);
+    }
+
+    @Override
+    protected void mouseMovedOrUp(int mouseX, int mouseY, int state) {
+        if (state != 0 || !list.func_148181_b(mouseX, mouseY, state)) super.mouseMovedOrUp(mouseX, mouseY, state);
     }
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) {
-        if (keyCode == Keyboard.KEY_ESCAPE) mc.displayGuiScreen(parent);
+        if (listening == null) super.keyTyped(typedChar, keyCode);
+        else if (keyCode == Keyboard.KEY_ESCAPE) listening = null;
     }
 
     @Override
     public void updateScreen() {
-        if (device == null) return;
+        if (listening == null || device == null) return;
         long now = System.currentTimeMillis();
         switch (phase) {
             case SETTLING -> settle(now);
             case LISTENING -> {
-                String detected = detect(currentKey());
+                String detected = detect(listening);
                 if (detected != null) {
-                    mapping.set(currentKey(), detected);
-                    lastAssigned = detected;
-                    setPhase(Phase.RELEASING);
-                } else if (now - phaseStart > STEP_TIMEOUT_MS) skip();
-            }
-            case RELEASING -> {
-                if (isAtRest()) advance();
-            }
-            case FINISHED -> {
-                boolean confirm = finishedMapping.isDown(GamepadButton.A), restart = finishedMapping.isDown(GamepadButton.B);
-                if (confirm && !confirmWasDown) save();
-                else if (restart && !restartWasDown) {
-                    step = 0;
-                    lastAssigned = null;
-                    setPhase(Phase.SETTLING);
-                } else {
-                    confirmWasDown = confirm;
-                    restartWasDown = restart;
+                    assign(listening, detected);
+                    phase = Phase.RELEASING;
                 }
             }
+            case RELEASING -> {
+                if (isAtRest()) listening = null;
+            }
         }
+        if (now - listenStart > LISTEN_TIMEOUT_MS) listening = null;
     }
 
     /** Records the resting state once no button is held and the axes stopped moving */
@@ -196,7 +155,8 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
             restHatX[i] = device.getHatX(i);
             restHatY[i] = device.getHatY(i);
         }
-        setPhase(Phase.LISTENING);
+        phase = Phase.LISTENING;
+        listenStart = now;
     }
 
     private boolean isAtRest() {
@@ -246,50 +206,48 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
         return InputSource.axis(device.getAxisName(axis), device.getAxisValue(axis) > restAxes[axis] ? Mode.POSITIVE : Mode.NEGATIVE);
     }
 
+    /** The first candidate of the spec this device has, since built in profiles list several */
+    private String describe(String spec) {
+        for (String candidate : spec.split("\\|")) if (InputSource.resolve(candidate.trim(), device) != InputSource.NONE) return candidate.trim();
+        return null;
+    }
+
+    private static String label(String key) {
+        GamepadButton button = GamepadButton.byName(key);
+        return button != null ? ButtonRenderer.getName(button) : I18n.format("thumbstick.gui.mapping.axis." + key.toLowerCase(Locale.ROOT));
+    }
+
     private void text(String text, int y, int color) { drawCenteredString(fontRendererObj, text, width / 2, y, color); }
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         drawDefaultBackground();
-        text(I18n.format("thumbstick.gui.mapping.title"), 15, 0xFFFFFF);
         if (device == null) {
+            text(I18n.format("thumbstick.gui.mapping.title"), 8, 0xFFFFFF);
             text(I18n.format("thumbstick.gui.controller.none"), height / 2 - 20, 0xFF5555);
             super.drawScreen(mouseX, mouseY, partialTicks);
             return;
         }
-        text(device.getName(), 27, 0xA0A0A0);
-        int y = height / 2 - 50;
-        switch (phase) {
-            case SETTLING -> text(I18n.format("thumbstick.gui.mapping.settle"), y + 20, 0xFFFF55);
-            case LISTENING, RELEASING -> {
-                text(I18n.format("thumbstick.gui.mapping.step", step + 1, ControllerMapping.KEYS.length), y, 0xA0A0A0);
-                drawPrompt(currentKey(), y + 18);
-                if (phase == Phase.RELEASING) text(I18n.format("thumbstick.gui.mapping.release"), y + 40, 0x55FF55);
-                else {
-                    long remaining = (STEP_TIMEOUT_MS - (System.currentTimeMillis() - phaseStart) + 999) / 1000;
-                    text(I18n.format("thumbstick.gui.mapping.timeout", Math.max(0, remaining)), y + 40, 0x808080);
-                }
-            }
-            case FINISHED -> {
-                text(I18n.format("thumbstick.gui.mapping.finished"), y + 10, 0x55FF55);
-                text(I18n.format("thumbstick.gui.mapping.finished_hint"), y + 24, 0xFFFFFF);
-            }
-        }
-        if (lastAssigned != null && phase != Phase.FINISHED) text(I18n.format("thumbstick.gui.mapping.assigned", lastAssigned), y + 54, 0xA0A0A0);
-        drawLiveInput(height - 76);
+        list.drawScreen(mouseX, mouseY, partialTicks);
+        text(I18n.format("thumbstick.gui.mapping.title") + EnumChatFormatting.GRAY + " (" + device.getName() + ")", 8, 0xFFFFFF);
+        text(hint(), 19, listening != null ? 0xFFFF55 : 0xA0A0A0);
+        drawLiveInput(height - 56);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
-    private void drawPrompt(String key, int y) {
-        GamepadButton button = GamepadButton.byName(key);
-        if (button == null) {
-            text(I18n.format("thumbstick.gui.mapping.prompt." + key.toLowerCase(Locale.ROOT)), y, 0xFFFF55);
-            return;
-        }
-        String text = I18n.format("thumbstick.gui.mapping.press", ButtonRenderer.getName(button));
-        int x = width / 2 - (fontRendererObj.getStringWidth(text) + ButtonRenderer.SIZE + 4) / 2;
-        ButtonRenderer.draw(mc, button, x, y - 3);
-        fontRendererObj.drawStringWithShadow(text, x + ButtonRenderer.SIZE + 4, y, 0xFFFF55);
+    private String hint() {
+        if (listening == null) return I18n.format("thumbstick.gui.mapping.help");
+        return switch (phase) {
+            case SETTLING -> I18n.format("thumbstick.gui.mapping.settle");
+            case RELEASING -> I18n.format("thumbstick.gui.mapping.release");
+            case LISTENING -> {
+                GamepadButton button = GamepadButton.byName(listening);
+                String what = button != null ? I18n.format("thumbstick.gui.mapping.press", ButtonRenderer.getName(button))
+                    : I18n.format("thumbstick.gui.mapping.prompt." + listening.toLowerCase(Locale.ROOT));
+                long remaining = (LISTEN_TIMEOUT_MS - (System.currentTimeMillis() - listenStart) + 999) / 1000;
+                yield I18n.format("thumbstick.gui.mapping.listening", what, Math.max(0, remaining));
+            }
+        };
     }
 
     /** Raw values, handy to see whether the controller is read at all */
@@ -304,5 +262,76 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
         }
         text(fontRendererObj.trimStringToWidth(I18n.format("thumbstick.gui.mapping.live_buttons", buttons.toString().trim()), width - 20), y, 0x808080);
         text(fontRendererObj.trimStringToWidth(axes.toString().trim(), width - 20), y + 10, 0x808080);
+    }
+
+    private class MappingList extends GuiListExtended {
+
+        private final MappingEntry[] entries = new MappingEntry[ControllerMapping.KEYS.length];
+
+        MappingList() {
+            super(GuiControllerMapping.this.mc, GuiControllerMapping.this.width, GuiControllerMapping.this.height, 32,
+                GuiControllerMapping.this.height - 60, 20);
+            for (int i = 0; i < entries.length; i++) entries[i] = new MappingEntry(ControllerMapping.KEYS[i]);
+        }
+
+        @Override protected int getSize() { return entries.length; }
+        @Override public IGuiListEntry getListEntry(int index) { return entries[index]; }
+        @Override public int getListWidth() { return 310; }
+        @Override protected int getScrollBarX() { return width / 2 + 160; }
+    }
+
+    private class MappingEntry implements GuiListExtended.IGuiListEntry {
+
+        private final String key;
+        private final GamepadButton button;
+        private final GuiButton sourceButton = new GuiButton(0, 0, 0, 105, 18, ""), clearButton;
+
+        MappingEntry(String key) {
+            this.key = key;
+            button = GamepadButton.byName(key);
+            clearButton = new GuiButton(0, 0, 0, 50, 18, I18n.format("thumbstick.gui.clear"));
+        }
+
+        @Override
+        public void drawEntry(int index, int x, int y, int listWidth, int slotHeight, Tessellator t, int mouseX, int mouseY, boolean selected) {
+            int textX = x;
+            if (button != null) {
+                ButtonRenderer.draw(mc, button, x, y + (slotHeight - ButtonRenderer.SIZE) / 2 - 1);
+                textX += ButtonRenderer.SIZE + 4;
+            }
+            fontRendererObj.drawString(fontRendererObj.trimStringToWidth(label(key), x + 140 - textX), textX, y + slotHeight / 2 - fontRendererObj.FONT_HEIGHT / 2, 0xFFFFFF);
+            String source = describe(mapping.get(key));
+            sourceButton.xPosition = x + 145;
+            sourceButton.yPosition = y;
+            sourceButton.displayString = fontRendererObj.trimStringToWidth(key.equals(listening)
+                ? EnumChatFormatting.WHITE + "> " + EnumChatFormatting.YELLOW + I18n.format("thumbstick.gui.press_button") + EnumChatFormatting.WHITE + " <"
+                : source == null ? EnumChatFormatting.GRAY + I18n.format("thumbstick.button.none") : source, 100);
+            sourceButton.drawButton(mc, mouseX, mouseY);
+            clearButton.xPosition = x + 255;
+            clearButton.yPosition = y;
+            clearButton.enabled = !mapping.get(key).isEmpty();
+            clearButton.drawButton(mc, mouseX, mouseY);
+        }
+
+        @Override
+        public boolean mousePressed(int index, int x, int y, int event, int relX, int relY) {
+            if (sourceButton.mousePressed(mc, x, y)) {
+                sourceButton.func_146113_a(mc.getSoundHandler());
+                listen(key);
+                return true;
+            }
+            if (clearButton.mousePressed(mc, x, y)) {
+                clearButton.func_146113_a(mc.getSoundHandler());
+                assign(key, "");
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void mouseReleased(int index, int x, int y, int event, int relX, int relY) {
+            sourceButton.mouseReleased(x, y);
+            clearButton.mouseReleased(x, y);
+        }
     }
 }

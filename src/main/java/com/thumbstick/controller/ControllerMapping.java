@@ -6,7 +6,7 @@ import java.util.Map;
 /** Maps logical inputs (GamepadButton and GamepadAxis names) to InputSource specs */
 public final class ControllerMapping {
 
-    /** Logical inputs in the order the mapping wizard asks for them */
+    /** Logical inputs in the order Controller Mapping lists them */
     public static final String[] KEYS = { "A", "B", "X", "Y", "LEFT_BUMPER", "RIGHT_BUMPER", "LEFT_TRIGGER",
         "RIGHT_TRIGGER", "BACK", "START", "GUIDE", "LEFT_STICK", "RIGHT_STICK", "DPAD_UP", "DPAD_DOWN", "DPAD_LEFT",
         "DPAD_RIGHT", "LEFT_X", "LEFT_Y", "RIGHT_X", "RIGHT_Y" };

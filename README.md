@@ -19,7 +19,7 @@
 - **Inventory controls:** take, split and quick move, slot snapping, dpad slot navigation, creative tabs and scrolling
 - **Rebindable buttons**, and any key binding (vanilla or modded) can get a controller button
 - **Button hints** for every control, shown only while the controller is in use. Size, corner, detail and layout are configurable
-- **Built in layouts** for Xbox, DualShock 4, DualSense and Switch Pro controllers, plus a **mapping wizard** for anything else
+- **Built in layouts** for Xbox, DualShock 4, DualSense and Switch Pro controllers, plus a **Controller Mapping** screen to remap any gamepad
 - **Hot plugging** with connect and disconnect notifications
 
 <p align="center"><img src=".github/previews/creative.png" width="75%" alt=""></p>
@@ -32,14 +32,14 @@
 Open **Options → Controls → Controller Settings...** (or **Mods → Thumbstick → Config**). From there you can pick the controller, tune sensitivity, edit **Button Bindings** and run **Controller Mapping**.
 
 > [!TIP]
-> If buttons are wrong or a toast says *Unknown layout*, run **Controller Mapping**. It asks for each button in turn and works with any gamepad.
+> If buttons are wrong or a toast says *Unknown layout*, run **Controller Mapping**. Click any input in the list and press it on the controller. It works with any gamepad.
 
 Settings are saved in `config/thumbstick/`:
 
 | File | Contents |
 | --- | --- |
 | `thumbstick.cfg` | Options and button bindings |
-| `mappings.properties` | Layouts made with the mapping wizard |
+| `mappings.properties` | Layouts made in Controller Mapping |
 
 <p align="center"><img src=".github/previews/settings.png" width="75%" alt=""></p>
 

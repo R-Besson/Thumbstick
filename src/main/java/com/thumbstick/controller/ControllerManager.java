@@ -240,7 +240,7 @@ public final class ControllerManager {
         reloadMapping();
     }
 
-    /** Reads the mapping of the active device again, like after the mapping wizard saved one */
+    /** Reads the mapping of the active device again, like after Controller Mapping saved one */
     public void reloadMapping() {
         mapping = active == null ? null : new ControllerMapping.Resolved(MappingStore.getMapping(active), active);
         for (boolean[] a : new boolean[][] { rawDown, latched, tickDown, suppressed, down, prevDown }) Arrays.fill(a, false);

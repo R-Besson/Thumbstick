@@ -9,7 +9,7 @@ import java.util.Properties;
 
 import com.thumbstick.Thumbstick;
 
-/** Saves wizard mappings by device name in a properties file as device name/logical input=source */
+/** Saves custom mappings by device name in a properties file as device name/logical input=source */
 public final class MappingStore {
 
     private static final Properties PROPERTIES = new Properties();

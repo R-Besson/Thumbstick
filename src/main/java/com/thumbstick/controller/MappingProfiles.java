@@ -4,7 +4,7 @@ import java.util.Locale;
 
 /**
  * Built in mappings for common controllers, picked by device name, using the element names JInput reports
- * (DirectInput on Windows, evdev on Linux). Anything else gets the Xbox layout and can use the mapping wizard.
+ * (DirectInput on Windows, evdev on Linux). Anything else gets the Xbox layout and can be remapped in Controller Mapping.
  */
 public final class MappingProfiles {
 

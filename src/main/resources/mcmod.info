@@ -1,7 +1,7 @@
 [{
   "modid": "${modId}",
   "name": "${modName}",
-  "description": "Play Minecraft with a controller: analog movement and camera, menu navigation with a cursor, inventory controls, rebindable buttons and a mapping wizard for any gamepad.",
+  "description": "Play Minecraft with a controller: analog movement and camera, menu navigation with a cursor, inventory controls, rebindable buttons and remapping for any gamepad.",
   "version": "${modVersion}",
   "mcversion": "${minecraftVersion}",
   "logoFile": "/assets/thumbstick/icon.png",
