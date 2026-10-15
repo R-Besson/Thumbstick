@@ -38,6 +38,7 @@ public final class Reflect {
     private static final Method CREATIVE_NEEDS_SCROLL = method(GuiContainerCreative.class, "needsScrollBars", "func_147055_p");
     private static final Method SLOT_ELEMENT_CLICKED = method(GuiSlot.class, "elementClicked", "func_148144_a", I, boolean.class, I, I);
     private static final Method SLOT_GET_SIZE = method(GuiSlot.class, "getSize", "func_148127_b");
+    private static final Method SLOT_IS_SELECTED = method(GuiSlot.class, "isSelected", "func_148131_a", I);
 
     private Reflect() {}
 
@@ -157,6 +158,8 @@ public final class Reflect {
         Object v = invoke(SLOT_GET_SIZE, list);
         return v == null ? 0 : (Integer) v;
     }
+
+    public static boolean isSelected(GuiSlot list, int index) { return Boolean.TRUE.equals(invoke(SLOT_IS_SELECTED, list, index)); }
 
     /** Reads a field by name from the object's class or its superclasses */
     public static Object getFieldValue(Object target, String... names) {

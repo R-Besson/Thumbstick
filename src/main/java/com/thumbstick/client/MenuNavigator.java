@@ -14,6 +14,7 @@ import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiIngameMenu;
 import net.minecraft.client.gui.GuiListExtended;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiSelectWorld;
 import net.minecraft.client.gui.GuiSlot;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiContainerCreative;
@@ -439,6 +440,8 @@ public final class MenuNavigator {
     private static final class Target {
 
         final int x, y, left, top, right, bottom;
+        /** The list this target enters, if any */
+        GuiSlot list;
 
         Target(int x, int y, int left, int top, int right, int bottom) {
             this.x = x;
@@ -466,17 +469,14 @@ public final class MenuNavigator {
                 }
             }
         }
-        // Inside a list, up and down step one entry and scroll at the edges
+        // Inside a list, up and down step one entry, scrolling it into view
         if (dy != 0) {
             for (GuiSlot list : findLists(screen)) {
-                if (!isInside(list, x, y) || Reflect.getSize(list) == 0) continue;
-                int newY = y + dy * list.slotHeight;
-                if (newY > list.top + 2 && newY < list.bottom - 2) {
-                    cursorY = newY;
-                    return;
-                }
-                if (dy > 0 ? list.getAmountScrolled() < list.func_148135_f() : list.getAmountScrolled() > 0) {
-                    list.scrollBy(dy * list.slotHeight);
+                int size = Reflect.getSize(list);
+                if (!isInside(list, x, y) || size == 0) continue;
+                int next = Math.max(-1, Math.min(size, entryAt(list, y))) + dy;
+                if (next >= 0 && next < size) {
+                    focusEntry(screen, list, next);
                     return;
                 }
             }
@@ -488,10 +488,36 @@ public final class MenuNavigator {
         // Prefer targets fully past the hovered one, so right from a left button picks its neighbor and not a wide button below
         Target best = current == null ? null : findTarget(targets, x, y, dx, dy, current);
         if (best == null) best = findTarget(targets, x, y, dx, dy, null);
-        if (best != null) {
-            cursorX = best.x;
-            cursorY = best.y;
+        if (best == null) return;
+        cursorX = best.x;
+        cursorY = best.y;
+        if (best.list != null) {
+            // Entering a list lands on its selected entry, or else the one nearest to where the cursor came from
+            int size = Reflect.getSize(best.list), index = Math.max(0, Math.min(size - 1, entryAt(best.list, best.y)));
+            for (int i = 0; i < size; i++) if (Reflect.isSelected(best.list, i)) index = i;
+            focusEntry(screen, best.list, index);
         }
+    }
+
+    /** Index of the list entry at a screen y, possibly out of range */
+    private static int entryAt(GuiSlot list, int y) {
+        return Math.floorDiv(y - list.top - list.headerPadding + list.getAmountScrolled() - 4, list.slotHeight);
+    }
+
+    private static int entryTop(GuiSlot list, int index) {
+        return list.top + 4 - list.getAmountScrolled() + list.headerPadding + index * list.slotHeight;
+    }
+
+    /** Scrolls an entry into view and moves the cursor onto it. World entries are also selected like with the arrow keys */
+    private void focusEntry(GuiScreen screen, GuiSlot list, int index) {
+        int top = entryTop(list, index), bottom = top + list.slotHeight - 4;
+        if (top < list.top + 4) list.scrollBy(top - list.top - 4);
+        else if (bottom > list.bottom - 4) list.scrollBy(bottom - list.bottom + 4);
+        cursorY = entryTop(list, index) + (list.slotHeight - 4) / 2;
+        if (list instanceof GuiListExtended) return;
+        cursorX = (list.left + list.right) / 2;
+        // Other plain lists act on click, like the language list reloading resources, so only worlds are selected
+        if (screen instanceof GuiSelectWorld) Reflect.elementClicked(list, index, false, getCursorX(), getCursorY());
     }
 
     private static Target findTarget(List<Target> targets, int x, int y, int dx, int dy, Target past) {
@@ -502,10 +528,13 @@ public final class MenuNavigator {
             if (past != null && !(dx > 0 ? t.left >= past.right : dx < 0 ? t.right <= past.left : dy > 0 ? t.top >= past.bottom : t.bottom <= past.top)) continue;
             int along = (t.x - x) * dx + (t.y - y) * dy;
             if (along <= 0) continue;
-            // Sideways distance to the edges, so wide buttons straight ahead count as aligned
-            int across = dx != 0 ? distanceOutside(y, t.top, t.bottom) : distanceOutside(x, t.left, t.right);
+            // Sideways distance to the edges, so wide buttons straight ahead count as aligned. Past a hovered target it is
+            // measured from its edges, so every button under a wide one is aligned
+            int across = past == null ? dx != 0 ? distanceOutside(y, t.top, t.bottom) : distanceOutside(x, t.left, t.right)
+                : dx != 0 ? gap(past.top, past.bottom, t.top, t.bottom) : gap(past.left, past.right, t.left, t.right);
             if (across > along * 2) continue;
-            double score = along + across * 3.0D;
+            // Ties go to the leftmost or topmost target
+            double score = along + across * 3.0D + (dx != 0 ? t.y : t.x) * 1e-4D;
             if (score < bestScore) {
                 bestScore = score;
                 best = t;
@@ -513,6 +542,9 @@ public final class MenuNavigator {
         }
         return best;
     }
+
+    /** Distance between two ranges, 0 when they overlap */
+    private static int gap(int min1, int max1, int min2, int max2) { return Math.max(0, Math.max(min2 - max1, min1 - max2) + 1); }
 
     private static int distanceOutside(int value, int min, int max) {
         return value < min ? min - value : value >= max ? value - max + 1 : 0;
@@ -540,7 +572,9 @@ public final class MenuNavigator {
             if (isInside(list, x, y) || Reflect.getSize(list) == 0) continue;
             int half = list.slotHeight / 2;
             int ty = Math.max(list.top + half + 4, Math.min(list.bottom - half, y));
-            targets.add(new Target((list.left + list.right) / 2, ty, list.left, list.top, list.right, list.bottom));
+            Target t = new Target((list.left + list.right) / 2, ty, list.left, list.top, list.right, list.bottom);
+            t.list = list;
+            targets.add(t);
         }
         return targets;
     }
