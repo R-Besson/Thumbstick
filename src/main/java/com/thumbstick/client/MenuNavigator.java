@@ -482,10 +482,24 @@ public final class MenuNavigator {
             }
         }
 
+        List<Target> targets = collectTargets(screen, x, y);
+        Target current = null;
+        for (Target t : targets) if (t.contains(x, y)) current = t;
+        // Prefer targets fully past the hovered one, so right from a left button picks its neighbor and not a wide button below
+        Target best = current == null ? null : findTarget(targets, x, y, dx, dy, current);
+        if (best == null) best = findTarget(targets, x, y, dx, dy, null);
+        if (best != null) {
+            cursorX = best.x;
+            cursorY = best.y;
+        }
+    }
+
+    private static Target findTarget(List<Target> targets, int x, int y, int dx, int dy, Target past) {
         Target best = null;
         double bestScore = Double.MAX_VALUE;
-        for (Target t : collectTargets(screen, x, y)) {
+        for (Target t : targets) {
             if (t.contains(x, y)) continue;
+            if (past != null && !(dx > 0 ? t.left >= past.right : dx < 0 ? t.right <= past.left : dy > 0 ? t.top >= past.bottom : t.bottom <= past.top)) continue;
             int along = (t.x - x) * dx + (t.y - y) * dy;
             if (along <= 0) continue;
             // Sideways distance to the edges, so wide buttons straight ahead count as aligned
@@ -497,10 +511,7 @@ public final class MenuNavigator {
                 best = t;
             }
         }
-        if (best != null) {
-            cursorX = best.x;
-            cursorY = best.y;
-        }
+        return best;
     }
 
     private static int distanceOutside(int value, int min, int max) {

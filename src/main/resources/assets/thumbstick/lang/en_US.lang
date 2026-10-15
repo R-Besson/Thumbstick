@@ -89,7 +89,6 @@ thumbstick.option.button_icons.switch=Switch
 thumbstick.gui.mapping.title=Controller Mapping
 thumbstick.gui.mapping.reset=Reset to Default
 thumbstick.gui.mapping.help=Click an input, then press it on the controller.
-thumbstick.gui.mapping.settle=Let go of the controller...
 thumbstick.gui.mapping.press=Press %s
 thumbstick.gui.mapping.listening=%s (Esc to cancel, %ss)
 thumbstick.gui.mapping.release=Got it! Now let go.

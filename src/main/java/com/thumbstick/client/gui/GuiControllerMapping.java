@@ -27,12 +27,12 @@ import com.thumbstick.controller.MappingStore;
  */
 public class GuiControllerMapping extends GuiScreen implements MenuNavigator.CaptureScreen {
 
-    private static final long LISTEN_TIMEOUT_MS = 10_000L, SETTLE_MS = 500L;
+    private static final long LISTEN_TIMEOUT_MS = 10_000L, SETTLE_MS = 250L;
     private static final float AXIS_THRESHOLD = 0.6F;
     private static final int RESET = 0, DONE = 1;
 
     private enum Phase {
-        /** Waiting for the controller to be left alone to record its resting state */
+        /** Recording the resting state for a moment, so the press that clicked the row is not taken */
         SETTLING,
         LISTENING,
         /** Waiting for the input just assigned to be released */
@@ -47,10 +47,10 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
     /** The input being listened for, null when idle */
     private String listening;
     private Phase phase;
-    private long listenStart, settleSince;
+    private long listenStart;
 
     private boolean[] restButtons;
-    private float[] restAxes, settleAxes;
+    private float[] restAxes;
     private int[] restHatX, restHatY;
 
     public GuiControllerMapping(GuiScreen parent) {
@@ -77,7 +77,6 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
         listening = key;
         phase = Phase.SETTLING;
         listenStart = System.currentTimeMillis();
-        settleAxes = null;
         // The press that clicked the row must not leave a menu click held
         ControllerManager.INSTANCE.suppressHeldButtons();
     }
@@ -121,6 +120,11 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
         switch (phase) {
             case SETTLING -> settle(now);
             case LISTENING -> {
+                // Inputs held since the click count as resting until let go
+                for (int i = 0; i < restButtons.length; i++) restButtons[i] &= device.isButtonDown(i);
+                for (int i = 0; i < restHatX.length; i++) {
+                    if (device.getHatX(i) == 0 && device.getHatY(i) == 0) restHatX[i] = restHatY[i] = 0;
+                }
                 String detected = detect(listening);
                 if (detected != null) {
                     assign(listening, detected);
@@ -134,27 +138,19 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
         if (now - listenStart > LISTEN_TIMEOUT_MS) listening = null;
     }
 
-    /** Records the resting state once no button is held and the axes stopped moving */
+    /** Takes the current state as resting, whatever is held, so noisy axes or a held button cannot stall it */
     private void settle(long now) {
-        float[] axes = new float[device.getAxisCount()];
-        for (int i = 0; i < axes.length; i++) axes[i] = device.getAxisValue(i);
-        boolean stable = settleAxes != null;
-        for (int i = 0; i < device.getButtonCount(); i++) if (device.isButtonDown(i)) stable = false;
-        for (int i = 0; stable && i < axes.length; i++) if (Math.abs(axes[i] - settleAxes[i]) > 0.05F) stable = false;
-        if (!stable) {
-            settleAxes = axes;
-            settleSince = now;
-            return;
-        }
-        if (now - settleSince < SETTLE_MS) return;
-        restAxes = axes;
+        restAxes = new float[device.getAxisCount()];
+        for (int i = 0; i < restAxes.length; i++) restAxes[i] = device.getAxisValue(i);
         restButtons = new boolean[device.getButtonCount()];
+        for (int i = 0; i < restButtons.length; i++) restButtons[i] = device.isButtonDown(i);
         restHatX = new int[device.getHatCount()];
         restHatY = new int[device.getHatCount()];
         for (int i = 0; i < restHatX.length; i++) {
             restHatX[i] = device.getHatX(i);
             restHatY[i] = device.getHatY(i);
         }
+        if (now - listenStart < SETTLE_MS) return;
         phase = Phase.LISTENING;
         listenStart = now;
     }
@@ -238,9 +234,8 @@ public class GuiControllerMapping extends GuiScreen implements MenuNavigator.Cap
     private String hint() {
         if (listening == null) return I18n.format("thumbstick.gui.mapping.help");
         return switch (phase) {
-            case SETTLING -> I18n.format("thumbstick.gui.mapping.settle");
             case RELEASING -> I18n.format("thumbstick.gui.mapping.release");
-            case LISTENING -> {
+            case SETTLING, LISTENING -> {
                 GamepadButton button = GamepadButton.byName(listening);
                 String what = button != null ? I18n.format("thumbstick.gui.mapping.press", ButtonRenderer.getName(button))
                     : I18n.format("thumbstick.gui.mapping.prompt." + listening.toLowerCase(Locale.ROOT));
