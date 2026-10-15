@@ -1,17 +1,16 @@
 <p align="center"><img src=".github/icon.png" width="160" alt="Thumbstick logo"></p>
-<h1 align="center">Thumbstick</h1>
 
-<p align="center">
-  <a href="https://minecraft.wiki/w/Java_Edition_1.7.10"><img src="https://img.shields.io/badge/Minecraft-1.7.10-62B47A?logo=minecraft&logoColor=white" alt="Minecraft"></a>
-  <a href="https://files.minecraftforge.net/net/minecraftforge/forge/index_1.7.10.html"><img src="https://img.shields.io/badge/Forge-10.13.4.1614-E04E14" alt="Forge"></a>
-  <img src="https://img.shields.io/badge/side-client%20only-blue" alt="Side">
-  <a href="https://github.com/R-Besson/Thumbstick/releases"><img src="https://img.shields.io/github/v/release/R-Besson/Thumbstick?label=release" alt="Release"></a>
-</p>
+<h1 align="center">Thumbstick</h1>
 
 <p align="center">A Controller Support Mod for Minecraft Forge 1.7.10.</p>
 
-> [!NOTE]
-> Thumbstick is **client side only**. It does nothing on servers.
+<p align="center">
+  <a href="https://github.com/R-Besson/Thumbstick/releases"><img src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/github_vector.svg" alt="Available on GitHub"></a>
+ <a href="https://www.curseforge.com/minecraft/mc-mods/thumbstick"><img src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/curseforge_vector.svg" alt="Available on CurseForge"></a>
+  <img src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/supported/forge_vector.svg" alt="Supports Forge">
+</p>
+
+[//]: # (  <a href="https://modrinth.com/mod/thumbstick"><img src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3/assets/cozy/available/modrinth_vector.svg" alt="Available on Modrinth"></a>)
 
 ## Features
 
@@ -22,6 +21,11 @@
 - **Button hints** for every control, shown only while the controller is in use. Size, corner, detail and layout are configurable
 - **Built in layouts** for Xbox, DualShock 4, DualSense and Switch Pro controllers, plus a **mapping wizard** for anything else
 - **Hot plugging** with connect and disconnect notifications
+
+<p align="center"><img src=".github/previews/creative.png" width="75%" alt=""></p>
+
+> [!NOTE]
+> Thumbstick is **client side only**. It does nothing on servers.
 
 ## Settings
 
@@ -36,6 +40,8 @@ Settings are saved in `config/thumbstick/`:
 | --- | --- |
 | `thumbstick.cfg` | Options and button bindings |
 | `mappings.properties` | Layouts made with the mapping wizard |
+
+<p align="center"><img src=".github/previews/settings.png" width="75%" alt=""></p>
 
 ## How it works
 
