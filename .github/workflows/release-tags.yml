@@ -11,4 +11,7 @@ permissions:
 jobs:
   release-tags:
     uses: GTNewHorizons/GTNH-Actions-Workflows/.github/workflows/release-tags.yml@master
-    secrets: inherit
+    # inherit does not pass secrets to workflows of another organization, so they are passed by name
+    secrets:
+      CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
