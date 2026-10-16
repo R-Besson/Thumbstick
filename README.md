@@ -23,7 +23,11 @@
 - **Built in layouts** for Xbox, DualShock 4, DualSense and Switch Pro controllers, plus a **Controller Mapping** screen to remap any gamepad
 - **Hot plugging** with connect and disconnect notifications
 
-<p align="center"><img src=".github/previews/creative.png" width="75%" alt=""></p>
+<p align="center"><img src=".github/previews/creative.png" width="50%" alt=""></p>
+
+### On-Screen Keyboard!
+
+<p align="center"><img src=".github/previews/chat.png" width="50%" alt=""></p>
 
 > [!NOTE]
 > Thumbstick is **client side only**. It does nothing on servers.
@@ -42,7 +46,7 @@ Settings are saved in `config/thumbstick/`:
 | `thumbstick.cfg` | Options and button bindings |
 | `mappings.properties` | Layouts made in Controller Mapping |
 
-<p align="center"><img src=".github/previews/settings.png" width="75%" alt=""></p>
+<p align="center"><img src=".github/previews/settings.png" width="50%" alt=""></p>
 
 ## How it works
 
