@@ -17,6 +17,7 @@
 
 - **Analog movement and camera** with a radial dead zone and an ease in look curve
 - **Works in every menu, modded ones too.** A controller cursor acts as the mouse and buttons become clicks
+- **Chat keyboard:** dpad right opens chat with an on screen keyboard
 - **Inventory controls:** take, split and quick move, slot snapping, dpad slot navigation, creative tabs and scrolling
 - **Rebindable buttons**, and any key binding (vanilla or modded) can get a controller button
 - **Button hints** for every control, shown only while the controller is in use. Size, corner, detail and layout are configurable

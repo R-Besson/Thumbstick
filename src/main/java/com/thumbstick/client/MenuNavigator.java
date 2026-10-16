@@ -68,6 +68,7 @@ public final class MenuNavigator {
     private final Minecraft mc = Minecraft.getMinecraft();
     private final ControllerManager controller = ControllerManager.INSTANCE;
     private final Map<Class<?>, List<Field>> listFieldCache = new HashMap<>();
+    private final OnScreenKeyboard keyboard = new OnScreenKeyboard();
 
     /** Cursor position in GUI coordinates */
     private double cursorX, cursorY, snapX, snapY;
@@ -90,6 +91,8 @@ public final class MenuNavigator {
     private long lastClickedTime;
 
     MenuNavigator() {}
+
+    public OnScreenKeyboard getKeyboard() { return keyboard; }
 
     private static Field mouseField(String name) {
         try {
@@ -135,6 +138,7 @@ public final class MenuNavigator {
         scrolling = false;
         scrollAccumulator = 0F;
         Arrays.fill(repeatTicks, 0);
+        keyboard.reset();
         if (screen == null) {
             frameScreen = null;
             setCursorHidden(false);
@@ -152,7 +156,9 @@ public final class MenuNavigator {
     private static boolean isCapturing(GuiScreen s) { return s instanceof CaptureScreen c && c.isCapturingController(); }
 
     /** True when the controller cursor should be drawn over the screen */
-    public boolean isCursorVisible(GuiScreen s) { return controllerCursor && s != null && s == frameScreen && !isCapturing(s); }
+    public boolean isCursorVisible(GuiScreen s) {
+        return controllerCursor && s != null && s == frameScreen && !isCapturing(s) && !keyboard.isActive(s);
+    }
 
     public int getCursorX() { return (int) cursorX; }
 
@@ -183,6 +189,10 @@ public final class MenuNavigator {
             return;
         }
         detectRealMouse();
+        if (keyboard.isActive(screen)) {
+            setCursorHidden(false);
+            return;
+        }
 
         float[] stick = ThumbstickConfig.cursorStick == ThumbstickConfig.CursorStick.LEFT ? controller.getLeftStick() : controller.getRightStick();
         boolean moving = stick[0] != 0F || stick[1] != 0F;
@@ -288,6 +298,10 @@ public final class MenuNavigator {
         if (isCapturing(screen)) {
             heldButton = -1;
             heldScreen = null;
+            return;
+        }
+        if (keyboard.isActive(screen)) {
+            keyboard.tick(screen);
             return;
         }
         if (controller.getAnyPressed() != null) takeControl(screen);

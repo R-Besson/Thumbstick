@@ -115,12 +115,23 @@ public final class HudRenderer {
         add(hints, HintDetail.ALL, Action.PICK_BLOCK, "thumbstick.hint.pick_block");
         add(hints, HintDetail.ALL, Action.TOGGLE_PERSPECTIVE, "thumbstick.hint.perspective");
         add(hints, HintDetail.ALL, Action.PLAYER_LIST, "thumbstick.hint.player_list");
-        add(hints, HintDetail.ALL, Action.CHAT, "thumbstick.hint.chat");
+        add(hints, HintDetail.BALANCED, Action.CHAT, "thumbstick.hint.chat");
         add(hints, HintDetail.ALL, Action.SCREENSHOT, "thumbstick.hint.screenshot");
         add(hints, HintDetail.ALL, Action.OPEN_SETTINGS, "thumbstick.hint.settings");
         add(hints, HintDetail.ALL, Action.PAUSE, "thumbstick.hint.pause");
         // Buttons bound to other key bindings, like from mods
         if (shown(HintDetail.ALL)) for (Map.Entry<String, GamepadButton> e : ThumbstickConfig.keyBindings.entrySet()) add(hints, e.getValue(), e.getKey());
+        return hints;
+    }
+
+    private List<Hint> getKeyboardHints() {
+        List<Hint> hints = new ArrayList<>();
+        add(hints, HintDetail.MINIMAL, Action.MENU_CLICK, "thumbstick.hint.type");
+        add(hints, HintDetail.MINIMAL, Action.MENU_RIGHT_CLICK, "thumbstick.hint.backspace");
+        add(hints, HintDetail.BALANCED, Action.MENU_CLOSE_INVENTORY, "thumbstick.hint.space");
+        add(hints, HintDetail.BALANCED, Action.MENU_PREVIOUS_TAB, Action.MENU_NEXT_TAB, "thumbstick.hint.move_caret");
+        add(hints, HintDetail.MINIMAL, Action.MENU_RESUME, "thumbstick.hint.send");
+        add(hints, HintDetail.MINIMAL, Action.MENU_BACK, "thumbstick.hint.close");
         return hints;
     }
 
@@ -180,15 +191,16 @@ public final class HudRenderer {
         if (toastTitle != null && toastStart == 0L) toastStart = System.currentTimeMillis();
         boolean toast = toastTitle != null && System.currentTimeMillis() - toastStart < TOAST_DURATION_MS;
         MenuNavigator navigator = ControllerInput.INSTANCE.getMenuNavigator();
-        boolean cursor = navigator.isCursorVisible(screen);
-        if (!menuHints && !toast && !cursor) return;
+        boolean cursor = navigator.isCursorVisible(screen), keyboard = navigator.getKeyboard().isActive(screen);
+        if (!menuHints && !toast && !cursor && !keyboard) return;
 
         ScaledResolution resolution = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
         mc.entityRenderer.setupOverlayRendering();
         GL11.glDisable(GL11.GL_DEPTH_TEST);
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glEnable(GL11.GL_BLEND);
-        if (menuHints) drawHints(getMenuHints(screen), resolution);
+        if (keyboard) navigator.getKeyboard().draw(screen);
+        if (menuHints) drawHints(keyboard ? getKeyboardHints() : getMenuHints(screen), resolution);
         if (toast) drawToast(resolution);
         if (cursor) drawCursor(screen, navigator);
         GL11.glEnable(GL11.GL_DEPTH_TEST);

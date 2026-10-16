@@ -139,6 +139,17 @@ thumbstick.hint.navigate=Jump to Slot
 thumbstick.hint.cursor=Move Cursor
 thumbstick.hint.scroll=Scroll
 thumbstick.hint.resume=Resume
+thumbstick.hint.type=Type
+thumbstick.hint.backspace=Backspace
+thumbstick.hint.space=Space
+thumbstick.hint.move_caret=Move Caret
+thumbstick.hint.send=Send
+
+thumbstick.keyboard.shift=Shift
+thumbstick.keyboard.tab=Tab
+thumbstick.keyboard.space=Space
+thumbstick.keyboard.backspace=Del
+thumbstick.keyboard.send=Send
 
 thumbstick.gui.hints=Button Hints...
 thumbstick.gui.hints.title=Button Hints

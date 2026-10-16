@@ -22,7 +22,7 @@ public enum Action {
     TOGGLE_PERSPECTIVE(DPAD_UP, "key.togglePerspective"),
     PLAYER_LIST(BACK, "key.playerlist"),
     PAUSE(START, null),
-    CHAT(null, "key.chat"),
+    CHAT(DPAD_RIGHT, "key.chat"),
     SCREENSHOT(null, "key.screenshot"),
     OPEN_SETTINGS(null, null),
 
