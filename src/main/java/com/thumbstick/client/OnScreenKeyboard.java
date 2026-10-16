@@ -1,5 +1,7 @@
 package com.thumbstick.client;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -11,6 +13,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiChat;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiSleepMP;
+import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.resources.I18n;
 
 import org.lwjgl.input.Keyboard;
@@ -109,9 +112,28 @@ public final class OnScreenKeyboard {
 
         if (fire(TYPE, down(Action.MENU_CLICK))) press(screen, ROWS.get(row)[column]);
         else if (fire(BACKSPACE, down(Action.MENU_RIGHT_CLICK))) Reflect.keyTyped(screen, '\b', Keyboard.KEY_BACK);
-        else if (fire(SPACE, down(Action.MENU_CLOSE_INVENTORY))) Reflect.keyTyped(screen, ' ', Keyboard.KEY_SPACE);
+        else if (fire(SPACE, down(Action.MENU_CLOSE_INVENTORY))) write(screen, " ");
         else if (fire(CARET_LEFT, down(Action.MENU_PREVIOUS_TAB))) Reflect.keyTyped(screen, (char) 0, Keyboard.KEY_LEFT);
         else if (fire(CARET_RIGHT, down(Action.MENU_NEXT_TAB))) Reflect.keyTyped(screen, (char) 0, Keyboard.KEY_RIGHT);
+    }
+
+    /**
+     * Writes into the focused text field directly. lwjgl3ify makes text fields ignore the character given to keyTyped and
+     * take text from OS text events only
+     */
+    private static void write(GuiScreen screen, String text) {
+        for (Class<?> c = screen.getClass(); c != null && c != GuiScreen.class; c = c.getSuperclass()) {
+            for (Field f : c.getDeclaredFields()) {
+                if (Modifier.isStatic(f.getModifiers()) || !GuiTextField.class.isAssignableFrom(f.getType())) continue;
+                try {
+                    f.setAccessible(true);
+                    if (f.get(screen) instanceof GuiTextField field && field.isFocused()) {
+                        field.writeText(text);
+                        return;
+                    }
+                } catch (ReflectiveOperationException | RuntimeException ignored) {}
+            }
+        }
     }
 
     private boolean down(Action a) { return controller.isDown(ThumbstickConfig.getBinding(a)); }
@@ -151,11 +173,11 @@ public final class OnScreenKeyboard {
         switch (key.special) {
             case SHIFT -> shift = !shift;
             case TAB -> Reflect.keyTyped(screen, '\t', Keyboard.KEY_TAB);
-            case SPACE -> Reflect.keyTyped(screen, ' ', Keyboard.KEY_SPACE);
+            case SPACE -> write(screen, " ");
             case BACKSPACE -> Reflect.keyTyped(screen, '\b', Keyboard.KEY_BACK);
             case SEND -> Reflect.keyTyped(screen, '\r', Keyboard.KEY_RETURN);
             case NONE -> {
-                Reflect.keyTyped(screen, shift ? key.shifted : key.normal, 0);
+                write(screen, String.valueOf(shift ? key.shifted : key.normal));
                 shift = false;
             }
         }
